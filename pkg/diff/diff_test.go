@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/argoproj/gitops-engine/pkg/diff/mocks"
-	"github.com/argoproj/gitops-engine/pkg/diff/testdata"
+	"github.com/STollenaar/gitops-engine/pkg/diff/mocks"
+	"github.com/STollenaar/gitops-engine/pkg/diff/testdata"
 	openapi_v2 "github.com/google/gnostic-models/openapiv2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -32,9 +32,9 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 	"k8s.io/kubectl/pkg/util/openapi"
 
-	"github.com/argoproj/gitops-engine/pkg/diff"
-	"github.com/argoproj/gitops-engine/pkg/utils/io"
-	"github.com/argoproj/gitops-engine/pkg/utils/tracing"
+	"github.com/STollenaar/gitops-engine/pkg/diff"
+	"github.com/STollenaar/gitops-engine/pkg/utils/io"
+	"github.com/STollenaar/gitops-engine/pkg/utils/tracing"
 )
 
 // ResourceOperations provides methods to manage k8s resources
@@ -114,6 +114,7 @@ func (k *kubectlResourceOperations) runResourceCommand(ctx context.Context, obj 
 	}
 	err = executor(k.fact, ioStreams, manifestFile.Name())
 	if err != nil {
+		fmt.Printf("Manifest data: %s", string(manifestBytes))
 		return "", errors.New(cleanKubectlOutput(err.Error()))
 	}
 	if buf := strings.TrimSpace(ioStreams.Out.(*bytes.Buffer).String()); len(buf) > 0 {

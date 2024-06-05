@@ -3,8 +3,8 @@
 package mocks
 
 import (
-	cache "github.com/argoproj/gitops-engine/pkg/cache"
-	kube "github.com/argoproj/gitops-engine/pkg/utils/kube"
+	cache "github.com/STollenaar/gitops-engine/pkg/cache"
+	kube "github.com/STollenaar/gitops-engine/pkg/utils/kube"
 
 	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
 

@@ -25,12 +25,12 @@ import (
 	"sigs.k8s.io/structured-merge-diff/v4/merge"
 	"sigs.k8s.io/structured-merge-diff/v4/typed"
 
-	"github.com/argoproj/gitops-engine/internal/kubernetes_vendor/pkg/api/v1/endpoints"
-	"github.com/argoproj/gitops-engine/pkg/diff/internal/fieldmanager"
-	"github.com/argoproj/gitops-engine/pkg/sync/resource"
-	jsonutil "github.com/argoproj/gitops-engine/pkg/utils/json"
-	gescheme "github.com/argoproj/gitops-engine/pkg/utils/kube/scheme"
-	kubescheme "github.com/argoproj/gitops-engine/pkg/utils/kube/scheme"
+	"github.com/STollenaar/gitops-engine/internal/kubernetes_vendor/pkg/api/v1/endpoints"
+	"github.com/STollenaar/gitops-engine/pkg/diff/internal/fieldmanager"
+	"github.com/STollenaar/gitops-engine/pkg/sync/resource"
+	jsonutil "github.com/STollenaar/gitops-engine/pkg/utils/json"
+	gescheme "github.com/STollenaar/gitops-engine/pkg/utils/kube/scheme"
+	kubescheme "github.com/STollenaar/gitops-engine/pkg/utils/kube/scheme"
 )
 
 const (
@@ -165,11 +165,13 @@ func serverSideDiff(config, live *unstructured.Unstructured, opts ...Option) (*D
 	}
 	predictedLiveStr, err := o.serverSideDryRunner.Run(context.Background(), config, o.manager)
 	if err != nil {
-		return nil, fmt.Errorf("error running server side apply in dryrun mode for resource %s/%s: %w", config.GetKind(), config.GetName(), err)
+		configData, _ := json.Marshal(config)
+		return nil, fmt.Errorf("error running server side apply in dryrun mode for resource %s/%s: %w; With Config: %s", config.GetKind(), config.GetName(), err, string(configData))
 	}
 	predictedLive, err := jsonStrToUnstructured(predictedLiveStr)
 	if err != nil {
-		return nil, fmt.Errorf("error converting json string to unstructured for resource %s/%s: %w", config.GetKind(), config.GetName(), err)
+		configData, _ := json.Marshal(config)
+		return nil, fmt.Errorf("error converting json string to unstructured for resource %s/%s: %w; With Config: %s", config.GetKind(), config.GetName(), err, string(configData))
 	}
 
 	if o.ignoreMutationWebhook {
@@ -251,27 +253,31 @@ func removeWebhookMutation(predictedLive, live *unstructured.Unstructured, gvkPa
 	}
 	// At this point, comparison holds all mutations that aren't owned by any
 	// of the existing managers.
+	typedPredictedLiveCopy := new(typed.TypedValue)
+	*typedPredictedLiveCopy = *typedPredictedLive
+	typedPredictedLive.Schema().CopyInto(typedPredictedLiveCopy.Schema())
 
 	if comparison.Added != nil && !comparison.Added.Empty() {
 		// remove added fields that aren't owned by any manager
-		typedPredictedLive = typedPredictedLive.RemoveItems(comparison.Added)
+		typedPredictedLiveCopy = typedPredictedLiveCopy.RemoveItems(comparison.Added)
 	}
 
 	if comparison.Modified != nil && !comparison.Modified.Empty() {
-		liveModValues := typedLive.ExtractItems(comparison.Modified)
+		liveModValues := typedPredictedLiveCopy.ExtractItems(comparison.Modified)
 		// revert modified fields not owned by any manager
-		typedPredictedLive, err = typedPredictedLive.Merge(liveModValues)
+		typedPredictedLiveCopy, err = typedPredictedLiveCopy.Merge(liveModValues)
 		if err != nil {
-			return nil, fmt.Errorf("error reverting webhook modified fields in predicted live resource: %s", err)
+			fmt.Printf("error reverting webhook removed fields in predicted live resource; This could be a bug: %s", err)
 		}
 	}
 
 	if comparison.Removed != nil && !comparison.Removed.Empty() {
-		liveRmValues := typedLive.ExtractItems(comparison.Removed)
+		liveRmValues := typedPredictedLiveCopy.ExtractItems(comparison.Removed)
+
 		// revert removed fields not owned by any manager
-		typedPredictedLive, err = typedPredictedLive.Merge(liveRmValues)
+		typedPredictedLiveCopy, err = typedPredictedLiveCopy.Merge(liveRmValues)
 		if err != nil {
-			return nil, fmt.Errorf("error reverting webhook removed fields in predicted live resource: %s", err)
+			fmt.Printf("error reverting webhook removed fields in predicted live resource; This could be a bug: %s", err)
 		}
 	}
 

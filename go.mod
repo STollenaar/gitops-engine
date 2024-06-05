@@ -1,4 +1,4 @@
-module github.com/argoproj/gitops-engine
+module github.com/STollenaar/gitops-engine
 
 go 1.21
 
