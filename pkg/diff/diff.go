@@ -163,6 +163,32 @@ func serverSideDiff(config, live *unstructured.Unstructured, opts ...Option) (*D
 	if o.serverSideDryRunner == nil {
 		return nil, fmt.Errorf("serverSideDryRunner is null")
 	}
+	if config.GetKind() == "Deployment" ||
+		config.GetKind() == "StatefulSet" ||
+		config.GetKind() == "DaemonSet" ||
+		config.GetKind() == "Pod" {
+
+		for _, container := range (*config).Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["containers"].([]map[string]interface{}) {
+			for _, env := range container["env"].([]map[string]interface{}) {
+				if env["value"] != nil {
+					env["valueFrom"] = nil
+				}
+				if env["valueFrom"] != nil {
+					env["value"] = nil
+				}
+			}
+		}
+		for _, container := range (*config).Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["initContainers"].([]map[string]interface{}) {
+			for _, env := range container["env"].([]map[string]interface{}) {
+				if env["value"] != nil {
+					env["valueFrom"] = nil
+				} else if env["valueFrom"] != nil {
+					env["value"] = nil
+				}
+			}
+		}
+	}
+
 	predictedLiveStr, err := o.serverSideDryRunner.Run(context.Background(), config, o.manager)
 	if err != nil {
 		configData, _ := json.Marshal(config)
